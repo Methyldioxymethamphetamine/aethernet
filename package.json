@@ -1,0 +1,20 @@
+{
+  "name": "aethernet",
+  "version": "1.0.0",
+  "description": "Air-gapped autonomous telemetry and self-healing local AI workspace",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "build:web": "pnpm --filter web build",
+    "start:web": "pnpm --filter web start",
+    "lint:web": "pnpm --filter web lint",
+    "infra:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "setup": "bash scripts/setup_monorepo.sh"
+  },
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=8"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
