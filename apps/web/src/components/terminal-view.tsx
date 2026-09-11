@@ -18,15 +18,37 @@ export function TerminalView() {
     // Initialize xterm.js
     const term = new Terminal({
       theme: {
-        background: '#0f172a', // slate-900
-        foreground: '#f8fafc', // slate-50
-        cursor: '#22d3ee', // cyan-400
-        selectionBackground: 'rgba(34, 211, 238, 0.3)',
+        background: '#0a0f1e',
+        foreground: '#cbd5e1',   // slate-300 — easier on the eyes
+        cursor: '#22d3ee',       // cyan-400
+        cursorAccent: '#0a0f1e',
+        selectionBackground: 'rgba(34, 211, 238, 0.2)',
+        black:   '#0f172a',
+        red:     '#f87171',      // red-400
+        green:   '#34d399',      // emerald-400
+        yellow:  '#fbbf24',      // amber-400
+        blue:    '#60a5fa',      // blue-400
+        magenta: '#c084fc',      // purple-400
+        cyan:    '#22d3ee',      // cyan-400
+        white:   '#e2e8f0',      // slate-200
+        brightBlack:   '#475569',
+        brightRed:     '#fca5a5',
+        brightGreen:   '#6ee7b7',
+        brightYellow:  '#fde68a',
+        brightBlue:    '#93c5fd',
+        brightMagenta: '#d8b4fe',
+        brightCyan:    '#67e8f9',
+        brightWhite:   '#f8fafc',
       },
-      fontFamily: 'var(--font-mono)',
-      fontSize: 13,
+      fontFamily: 'var(--font-jetbrains-mono), "Fira Code", "Cascadia Code", ui-monospace, monospace',
+      fontSize: 14,
+      lineHeight: 2.0,
+      letterSpacing: 0.5,
       cursorBlink: true,
+      cursorStyle: 'bar',
+      cursorWidth: 2,
       disableStdin: true,
+      scrollback: 1000,
     });
     
     const fitAddon = new FitAddon();
@@ -94,6 +116,35 @@ export function TerminalView() {
     };
   }, [setMetrics, addLog]);
 
+  const triggerSelfHealing = () => {
+    if (!termInstance.current) return;
+    const term = termInstance.current;
+    term.writeln('\x1b[35m[AI TRIGGER]\x1b[0m Connecting to AI Orchestrator SSE stream...');
+
+    const orchestratorUrl = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://localhost:8000';
+    const eventSource = new EventSource(`${orchestratorUrl}/api/agent/trigger?source=ui_button`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'log') {
+          term.writeln(payload.data);
+          addLog(payload.data);
+        } else if (payload.type === 'summary') {
+          term.writeln('\x1b[32m[AI ORCHESTRATOR]\x1b[0m Self-healing cycle finished successfully.');
+          eventSource.close();
+        }
+      } catch (e) {
+        term.writeln(event.data);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      term.writeln('\x1b[31m[ERROR]\x1b[0m Could not connect to AI Orchestrator at http://localhost:8000. Ensure "make orchestrator" is running.');
+      eventSource.close();
+    };
+  };
+
   return (
     <div className="flex flex-col w-full h-full bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
       <div className="flex items-center justify-between px-4 py-2 bg-slate-950 border-b border-slate-800">
@@ -105,9 +156,17 @@ export function TerminalView() {
           </div>
           <span className="ml-2 text-xs font-mono text-slate-400">root@aethernet:~/pipeline</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-online animate-pulse' : 'bg-danger'}`}></div>
-          <span className="text-[10px] uppercase font-mono text-slate-500">{isConnected ? 'Live' : 'Offline'}</span>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={triggerSelfHealing}
+            className="px-2.5 py-1 text-[11px] font-mono font-medium text-cyan-300 bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/40 rounded shadow-sm hover:border-cyan-400 transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>⚡ Trigger AI Self-Heal</span>
+          </button>
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-online animate-pulse' : 'bg-danger'}`}></div>
+            <span className="text-[10px] uppercase font-mono text-slate-500">{isConnected ? 'Live' : 'Offline'}</span>
+          </div>
         </div>
       </div>
       <div ref={terminalRef} className="flex-1 w-full p-4 overflow-hidden" />

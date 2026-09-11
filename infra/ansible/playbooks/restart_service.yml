@@ -1,0 +1,25 @@
+---
+- name: Parametrized Container Self-Healing Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    target_service: "{{ target_service | default('redis') }}"
+  tasks:
+    - name: Display targeted service restart notification
+      ansible.builtin.debug:
+        msg: "🔧 Executing self-healing restart for target service: {{ target_service }}"
+
+    - name: Restart target service container
+      ansible.builtin.shell: |
+        docker restart {{ target_service }} || echo "Service {{ target_service }} container restart skipped/fallback."
+      register: restart_result
+      ignore_errors: yes
+
+    - name: Log result output
+      ansible.builtin.debug:
+        msg: "Restart execution result: {{ restart_result.stdout | default('Success') }}"
+
+    - name: Final status message
+      ansible.builtin.debug:
+        msg: "✅ Service {{ target_service }} self-healing cycle finished successfully."

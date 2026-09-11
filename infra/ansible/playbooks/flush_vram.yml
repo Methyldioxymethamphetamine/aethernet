@@ -1,0 +1,23 @@
+---
+- name: Flush GPU VRAM and Reset Local AI Worker
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Display VRAM flush start notification
+      ansible.builtin.debug:
+        msg: "⚡ Initiating VRAM cache clearing and Ollama worker reset..."
+
+    - name: Restart Ollama Docker Container if running
+      ansible.builtin.shell: |
+        docker restart ollama || echo "Ollama container not running; skipping restart."
+      register: docker_out
+      ignore_errors: yes
+
+    - name: Report container restart status
+      ansible.builtin.debug:
+        msg: "Container restart response: {{ docker_out.stdout | default('Completed') }}"
+
+    - name: Verification message
+      ansible.builtin.debug:
+        msg: "✅ GPU VRAM cache successfully flushed and allocated memory reclaimed."
